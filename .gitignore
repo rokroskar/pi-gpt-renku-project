@@ -1,1 +1,6 @@
 .pi
+.venv/
+__pycache__/
+data/
+outputs/
+*.pyc
