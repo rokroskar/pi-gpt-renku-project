@@ -12,7 +12,10 @@ from __future__ import annotations
 
 import gzip
 import os
+import re
 import struct
+import subprocess
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -117,6 +120,99 @@ def artifact_status(model_dir: Path) -> dict[str, Path]:
     }
 
 
+def safe_exists(path: Path) -> bool:
+    try:
+        return path.exists()
+    except OSError:
+        return False
+
+
+def safe_size(path: Path) -> str:
+    try:
+        return f"{path.stat().st_size / 1024 / 1024:.2f} MB"
+    except OSError:
+        return "unavailable"
+
+
+def run_training_with_progress(data_dir: Path, model_dir: Path, numpy_epochs: int, torch_epochs: int, sync_wait: int) -> bool:
+    """Run the artifact-preparation script and stream logs into Streamlit."""
+    script_dir = Path(__file__).resolve().parent
+    prepare_script = script_dir / "prepare_model_artifacts.py"
+    if not prepare_script.exists():
+        st.error(f"Could not find training helper: {prepare_script}")
+        return False
+
+    command = [
+        sys.executable,
+        str(prepare_script),
+        "--data-dir",
+        str(data_dir),
+        "--artifact-dir",
+        str(model_dir),
+        "--numpy-epochs",
+        str(numpy_epochs),
+        "--torch-epochs",
+        str(torch_epochs),
+        "--sync-wait",
+        str(sync_wait),
+    ]
+
+    stage = st.empty()
+    progress = st.progress(0, text="Starting training...")
+    log_box = st.empty()
+    logs: list[str] = []
+    total_units = max(numpy_epochs + torch_epochs + 2, 1)
+    current_stage_offset = 0
+
+    stage.info("Preparing model artifact directory and starting NumPy MLP training...")
+    process = subprocess.Popen(
+        command,
+        cwd=str(script_dir),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )
+
+    assert process.stdout is not None
+    for line in process.stdout:
+        line = line.rstrip()
+        logs.append(line)
+        if len(logs) > 160:
+            logs = logs[-160:]
+        log_box.code("\n".join(logs), language="text")
+
+        if "train_torch_mnist.py" in line or "Loaded MNIST" in line and "SmallCNN" in line:
+            current_stage_offset = numpy_epochs
+            stage.info("NumPy model saved. Training PyTorch CNN...")
+        elif "Wrote readiness marker" in line:
+            progress.progress(min((numpy_epochs + torch_epochs + 1) / total_units, 0.98), text="Artifacts verified; writing readiness marker...")
+            stage.info("Artifacts verified. Flushing writes to the output connector...")
+        elif "Outputs written, waiting" in line:
+            progress.progress(min((numpy_epochs + torch_epochs + 1) / total_units, 0.98), text="Waiting for connector sync...")
+            stage.info("Waiting for rclone/connector sync so files persist after the session exits...")
+        elif "Artifact preparation complete" in line:
+            progress.progress(1.0, text="Training complete")
+            stage.success("Training complete. Artifacts are ready.")
+        else:
+            match = re.search(r"epoch=(\d+)", line)
+            if match:
+                epoch = int(match.group(1))
+                done_units = min(current_stage_offset + epoch, numpy_epochs + torch_epochs)
+                label = "Training PyTorch CNN" if current_stage_offset else "Training NumPy MLP"
+                progress.progress(min(done_units / total_units, 0.95), text=f"{label}: epoch {epoch}")
+
+    return_code = process.wait()
+    if return_code != 0:
+        progress.progress(0, text="Training failed")
+        stage.error(f"Training failed with exit code {return_code}. See logs above.")
+        return False
+
+    load_cnn.clear()
+    load_test_data.clear()
+    return True
+
+
 def main() -> None:
     st.set_page_config(page_title="MNIST model dashboard", layout="wide")
     st.title("MNIST model inspection dashboard")
@@ -127,11 +223,20 @@ def main() -> None:
         data_dir = Path(st.text_input("MNIST data directory", str(DEFAULT_DATA_DIR)))
         model_dir = Path(st.text_input("Model artifact directory", str(DEFAULT_MODEL_DIR)))
         artifacts = artifact_status(model_dir)
-        available = [name for name, path in artifacts.items() if path.exists()]
-        missing = {name: path for name, path in artifacts.items() if not path.exists()}
+        available = [name for name, path in artifacts.items() if safe_exists(path)]
+        missing = {name: path for name, path in artifacts.items() if not safe_exists(path)}
         st.subheader("Artifacts")
         for name, path in artifacts.items():
-            st.write(("✅" if path.exists() else "❌"), name, f"`{path}`")
+            status = "✅" if safe_exists(path) else "❌"
+            size = f" ({safe_size(path)})" if safe_exists(path) else ""
+            st.write(status, name, f"`{path}`{size}")
+
+        st.subheader("Bootstrap training")
+        numpy_epochs = st.number_input("NumPy MLP epochs", min_value=1, max_value=100, value=30, step=1)
+        torch_epochs = st.number_input("PyTorch CNN epochs", min_value=1, max_value=50, value=5, step=1)
+        sync_wait = st.number_input("Connector sync wait (seconds)", min_value=0, max_value=600, value=180, step=30)
+        train_button_label = "Train missing models" if missing else "Retrain / overwrite models"
+        train_requested = st.button(train_button_label, type="primary" if missing else "secondary")
 
     try:
         images, labels = load_test_data(str(data_dir))
@@ -139,13 +244,21 @@ def main() -> None:
         st.error(f"Could not load MNIST test data from {data_dir}: {exc}")
         st.stop()
 
-    if not available:
-        st.warning("No model artifacts found. Run the training job(s) first so `models/` contains saved models.")
-        st.code(
-            "python train_mnist.py --data-dir /home/renku/work/mnist-dataset-doi-10.5281-zenodo.10058130 --model-dir models --epochs 30\n"
-            "python train_torch_mnist.py --data-dir /home/renku/work/mnist-dataset-doi-10.5281-zenodo.10058130 --model-dir models --epochs 5",
-            language="bash",
+    if train_requested:
+        st.header("Training models in this session")
+        st.write(
+            "This runs the same training scripts as the non-interactive Renku job, writes artifacts to the selected "
+            "model directory, then waits for the mounted output connector to sync."
         )
+        ok = run_training_with_progress(data_dir, model_dir, int(numpy_epochs), int(torch_epochs), int(sync_wait))
+        if ok:
+            st.success("Models trained successfully. Refreshing dashboard...")
+            st.rerun()
+        st.stop()
+
+    if not available:
+        st.warning("No model artifacts found. You can train them directly from this dashboard, or run the Renku training job launcher.")
+        st.info("Use the **Train missing models** button in the sidebar to bootstrap the artifacts and watch progress here.")
         st.stop()
 
     col_controls, col_image, col_pred = st.columns([1.2, 1, 1.5])
