@@ -34,11 +34,23 @@ pip install -r requirements.txt
 python train_torch_mnist.py --download-if-missing --epochs 1 --train-limit 5000 --test-limit 1000
 ```
 
-The script writes:
+The scripts write:
 
 - `outputs/metrics.json`
-- `outputs/mnist-small-cnn.pt`
+- `models/mnist-small-cnn.pt` for PyTorch
+- `models/mnist-mlp-model.npz` for NumPy
 
-The NumPy baseline writes `outputs/mnist-mlp-model.npz`.
+## Dashboard
 
-The final log line starts with `FINAL_METRICS` and contains JSON metrics, which makes job logs easy to parse.
+A Streamlit dashboard can inspect predictions on the mounted MNIST test set and switch between available model artifacts:
+
+```bash
+streamlit run dashboard.py --server.address 0.0.0.0 --server.port 8080
+```
+
+The dashboard expects:
+
+- data: `/home/renku/work/mnist-dataset-doi-10.5281-zenodo.10058130`
+- model artifacts: `/home/renku/work/models`
+
+The final training log line starts with `FINAL_METRICS` and contains JSON metrics, which makes job logs easy to parse.

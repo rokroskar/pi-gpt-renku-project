@@ -207,11 +207,14 @@ def train(args: argparse.Namespace) -> dict:
     }
 
     output_dir = Path(args.output_dir)
+    model_dir = Path(args.model_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    model_dir.mkdir(parents=True, exist_ok=True)
     metrics_path = output_dir / "metrics.json"
-    model_path = output_dir / "mnist-small-cnn.pt"
+    model_path = model_dir / "mnist-small-cnn.pt"
     metrics_path.write_text(json.dumps(metrics, indent=2) + "\n")
     torch.save({"model_state_dict": model.state_dict(), "metrics": metrics}, model_path)
+    torch.save({"model_state_dict": model.state_dict(), "metrics": metrics}, output_dir / "mnist-small-cnn.pt")
     print(f"Wrote metrics to {metrics_path}", flush=True)
     print(f"Wrote model to {model_path}", flush=True)
     print("FINAL_METRICS " + json.dumps(metrics, sort_keys=True), flush=True)
@@ -222,6 +225,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train a PyTorch CNN classifier on MNIST")
     parser.add_argument("--data-dir", default=os.environ.get("MNIST_DATA_DIR", "data"))
     parser.add_argument("--output-dir", default=os.environ.get("OUTPUT_DIR", "outputs"))
+    parser.add_argument("--model-dir", default=os.environ.get("MODEL_DIR", "models"))
     parser.add_argument("--epochs", type=int, default=int(os.environ.get("EPOCHS", "5")))
     parser.add_argument("--batch-size", type=int, default=int(os.environ.get("BATCH_SIZE", "128")))
     parser.add_argument("--eval-batch-size", type=int, default=int(os.environ.get("EVAL_BATCH_SIZE", "1024")))
