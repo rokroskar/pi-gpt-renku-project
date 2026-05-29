@@ -11,6 +11,7 @@ loads model artifacts created by the non-interactive training jobs:
 from __future__ import annotations
 
 import gzip
+import os
 import struct
 from pathlib import Path
 
@@ -19,8 +20,8 @@ import streamlit as st
 import torch
 from torch import nn
 
-DEFAULT_DATA_DIR = Path("/home/renku/work/mnist-dataset-doi-10.5281-zenodo.10058130")
-DEFAULT_MODEL_DIR = Path("/home/renku/work/models")
+DEFAULT_DATA_DIR = Path(os.environ.get("MNIST_DATA_DIR", "/home/renku/work/mnist-dataset-doi-10.5281-zenodo.10058130"))
+DEFAULT_MODEL_DIR = Path(os.environ.get("MODEL_DIR", "/home/renku/work/model-artifacts/mnist-models"))
 
 
 class SmallCNN(nn.Module):
