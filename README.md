@@ -1,92 +1,31 @@
 # Renku non-interactive MNIST training job
 
-This repository demonstrates a Renku project with **non-interactive machine-learning training jobs** and an **interactive Streamlit dashboard** for inspecting saved model artifacts.
+This repository is a minimal example for running a non-interactive machine-learning training job on Renku.
 
-The project trains two MNIST classifiers from IDX files provided by Zenodo DOI [`10.5281/zenodo.10058130`](https://doi.org/10.5281/zenodo.10058130):
+It includes two training approaches on MNIST IDX files from Zenodo:
 
-- `train_mnist.py`: dependency-light NumPy MLP baseline.
-- `train_torch_mnist.py`: PyTorch CNN with higher accuracy.
+- `train_torch_mnist.py`: a PyTorch CNN, used by the Renku non-interactive job.
+- `train_mnist.py`: a dependency-light NumPy MLP baseline.
 
-In Renku, the MNIST data is mounted from the Zenodo data connector. The jobs do **not** download MNIST at runtime.
+- DOI: [`10.5281/zenodo.10058130`](https://doi.org/10.5281/zenodo.10058130)
 
-## Renku workflow
+The intended Renku workflow is:
 
-The intended Renku setup uses three launchers:
+1. Link this code repository to a Renku project.
+2. Link/create a Zenodo data connector for the MNIST record, mounted at `data/`.
+3. Build a Python environment from `requirements.txt`.
+4. Create a non-interactive launcher that runs:
 
-1. **Build Python environment from repository**
-   - Builds the Python environment from `requirements.txt`.
-   - A rebuild is only needed when dependencies change.
+   ```bash
+   python train_torch_mnist.py \
+     --data-dir /home/renku/work/mnist-dataset-doi-10.5281-zenodo.10058130 \
+     --output-dir outputs \
+     --epochs 5
+   ```
 
-2. **Prepare MNIST model artifacts job**
-   - A non-interactive job launcher.
-   - Runs `prepare_model_artifacts.py`, which trains both models and writes artifacts to a writable output connector.
-   - Includes `os.sync()` and a configurable wait so rclone-backed output connectors have time to flush writes before the job exits.
-
-3. **MNIST Streamlit model dashboard**
-   - An interactive Streamlit session.
-   - Loads the mounted MNIST test set and saved model artifacts.
-   - Lets users switch between models, select/randomize test examples, and inspect prediction probabilities.
-   - Can also bootstrap/retrain missing models directly from the dashboard with live progress and logs.
-
-## Renku paths
-
-Default mounted paths used by the scripts and dashboard:
-
-- MNIST data connector:
-  `/home/renku/work/mnist-dataset-doi-10.5281-zenodo.10058130`
-- Writable model artifact connector:
-  `/home/renku/work/model-artifacts`
-- Model artifact directory:
-  `/home/renku/work/model-artifacts/mnist-models`
-
-Expected artifacts:
-
-- `/home/renku/work/model-artifacts/mnist-models/mnist-mlp-model.npz`
-- `/home/renku/work/model-artifacts/mnist-models/mnist-small-cnn.pt`
-- `/home/renku/work/model-artifacts/mnist-models/_ARTIFACTS_READY.json`
-
-## Running the artifact job manually
-
-The non-interactive launcher runs the equivalent of:
-
-```bash
-python prepare_model_artifacts.py \
-  --data-dir /home/renku/work/mnist-dataset-doi-10.5281-zenodo.10058130 \
-  --artifact-dir /home/renku/work/model-artifacts/mnist-models \
-  --numpy-epochs 30 \
-  --torch-epochs 5 \
-  --sync-wait 180
-```
-
-The final training logs include `FINAL_METRICS` JSON records from both trainers. The preparation script verifies the artifacts, writes `_ARTIFACTS_READY.json`, calls `os.sync()`, and waits for connector synchronization.
-
-## Dashboard
-
-The dashboard is implemented in `dashboard.py` and runs with Streamlit:
-
-```bash
-streamlit run dashboard.py --server.address 0.0.0.0 --server.port 8080
-```
-
-Inside Renku, the dashboard launcher uses the runtime-cloned repository path and the Renku path prefix, for example:
-
-```bash
-streamlit run /home/renku/work/pi-gpt-renku-project/dashboard.py \
-  --server.address 0.0.0.0 \
-  --server.port 8080 \
-  --server.headless true \
-  --server.enableCORS false \
-  --server.enableXsrfProtection false \
-  --server.baseUrlPath ${RENKU_BASE_URL_PATH#/}
-```
-
-The sidebar shows artifact availability and sizes. If artifacts are missing or corrupted, use **Train missing models** to run the same preparation workflow interactively with progress bars and streamed logs.
-
-See [`docs/dashboard.md`](docs/dashboard.md) for more dashboard details.
+5. Launch it as a Renku non-interactive job.
 
 ## Local test
-
-For a small local smoke test that downloads MNIST only for local development:
 
 ```bash
 python3 -m venv .venv
@@ -95,4 +34,23 @@ pip install -r requirements.txt
 python train_torch_mnist.py --download-if-missing --epochs 1 --train-limit 5000 --test-limit 1000
 ```
 
-For Renku jobs, use the mounted Zenodo connector instead of `--download-if-missing`.
+The scripts write:
+
+- `outputs/metrics.json`
+- `models/mnist-small-cnn.pt` for PyTorch
+- `models/mnist-mlp-model.npz` for NumPy
+
+## Dashboard
+
+A Streamlit dashboard can inspect predictions on the mounted MNIST test set and switch between available model artifacts:
+
+```bash
+streamlit run dashboard.py --server.address 0.0.0.0 --server.port 8080
+```
+
+The dashboard expects:
+
+- data: `/home/renku/work/mnist-dataset-doi-10.5281-zenodo.10058130`
+- model artifacts: `/home/renku/work/models`
+
+The final training log line starts with `FINAL_METRICS` and contains JSON metrics, which makes job logs easy to parse.
