@@ -10,10 +10,13 @@ The launcher runs `dashboard.py` from the runtime-cloned GitHub repository and s
 
 ## Default paths
 
-The dashboard defaults to the Renku connector mounts used by this project:
+The dashboard uses separate paths for read-only pre-trained artifacts and writable interactive retraining output:
 
 - MNIST data: `/home/renku/work/mnist-dataset-doi-10.5281-zenodo.10058130`
-- Model artifacts: `/home/renku/work/model-artifacts/mnist-models`
+- Public read-only pre-trained artifacts: `/home/renku/work/pretrained-model-artifacts/mnist-models`
+- Session-local retraining output: `/home/renku/work/dashboard-trained-models`
+
+The non-interactive training job still writes to the private writable output connector at `/home/renku/work/model-artifacts/mnist-models`; the dashboard reads pre-trained public artifacts from the separate read-only connector so users without write permission can still use the demo.
 
 Expected artifact files:
 
@@ -34,12 +37,12 @@ The dashboard lets users:
 
 ## Bootstrap training from the dashboard
 
-If the saved artifacts are missing or unreadable, the dashboard can train them directly from the interactive session.
+If the pre-trained artifacts are missing or unreadable, the dashboard can train models directly from the interactive session. These dashboard-triggered runs write to `/home/renku/work/dashboard-trained-models`, not to the public read-only connector.
 
 Use the sidebar button:
 
-- **Train missing models** when artifacts are absent;
-- **Retrain / overwrite models** when artifacts already exist.
+- **Train models in this session** when artifacts are absent;
+- **Retrain into session directory** when artifacts already exist.
 
 The dashboard then runs `prepare_model_artifacts.py`, which:
 
@@ -48,11 +51,11 @@ The dashboard then runs `prepare_model_artifacts.py`, which:
 3. verifies both artifact files;
 4. writes `_ARTIFACTS_READY.json`;
 5. calls `os.sync()`;
-6. waits for the mounted output connector to flush writes.
+6. optionally waits after flushing writes.
 
 During this process, the dashboard shows a progress bar, current training stage, and streamed logs.
 
-The preferred production workflow is still the non-interactive **Prepare MNIST model artifacts job** launcher. The dashboard bootstrap option is intended as a recovery/demo path so a user can still see the project run if artifacts are missing.
+The preferred production workflow is still the non-interactive **Prepare MNIST model artifacts job** launcher. The dashboard bootstrap option is intended as a recovery/demo path so a user can still see the project run if public pre-trained artifacts are missing or they want to retrain without write access to the artifact connector.
 
 ## Local run
 
@@ -65,5 +68,5 @@ streamlit run dashboard.py --server.address 0.0.0.0 --server.port 8080
 Set custom paths with environment variables if needed:
 
 ```bash
-MNIST_DATA_DIR=/path/to/mnist MODEL_DIR=/path/to/models streamlit run dashboard.py
+MNIST_DATA_DIR=/path/to/mnist PRETRAINED_MODEL_DIR=/path/to/pretrained SESSION_MODEL_DIR=/path/to/session-models streamlit run dashboard.py
 ```

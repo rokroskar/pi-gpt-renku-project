@@ -24,7 +24,10 @@ import torch
 from torch import nn
 
 DEFAULT_DATA_DIR = Path(os.environ.get("MNIST_DATA_DIR", "/home/renku/work/mnist-dataset-doi-10.5281-zenodo.10058130"))
-DEFAULT_MODEL_DIR = Path(os.environ.get("MODEL_DIR", "/home/renku/work/model-artifacts/mnist-models"))
+DEFAULT_PRETRAINED_MODEL_DIR = Path(
+    os.environ.get("PRETRAINED_MODEL_DIR", "/home/renku/work/pretrained-model-artifacts/mnist-models")
+)
+DEFAULT_SESSION_MODEL_DIR = Path(os.environ.get("SESSION_MODEL_DIR", "/home/renku/work/dashboard-trained-models"))
 
 
 class SmallCNN(nn.Module):
@@ -218,24 +221,48 @@ def main() -> None:
     st.title("MNIST model inspection dashboard")
     st.caption("Compare the NumPy MLP and PyTorch CNN trained by Renku non-interactive jobs.")
 
+    if "model_source" not in st.session_state:
+        st.session_state.model_source = "Pretrained models (public, read-only)"
+
     with st.sidebar:
         st.header("Paths")
         data_dir = Path(st.text_input("MNIST data directory", str(DEFAULT_DATA_DIR)))
-        model_dir = Path(st.text_input("Model artifact directory", str(DEFAULT_MODEL_DIR)))
+        pretrained_model_dir = Path(st.text_input("Pretrained model directory (read-only)", str(DEFAULT_PRETRAINED_MODEL_DIR)))
+        session_model_dir = Path(st.text_input("Session training output directory", str(DEFAULT_SESSION_MODEL_DIR)))
+        custom_model_dir_text = st.text_input("Custom model directory", "")
+
+        model_source = st.radio(
+            "Model source",
+            [
+                "Pretrained models (public, read-only)",
+                "Models trained in this session",
+                "Custom path",
+            ],
+            key="model_source",
+        )
+        if model_source == "Models trained in this session":
+            model_dir = session_model_dir
+        elif model_source == "Custom path" and custom_model_dir_text.strip():
+            model_dir = Path(custom_model_dir_text.strip())
+        else:
+            model_dir = pretrained_model_dir
+
         artifacts = artifact_status(model_dir)
         available = [name for name, path in artifacts.items() if safe_exists(path)]
         missing = {name: path for name, path in artifacts.items() if not safe_exists(path)}
         st.subheader("Artifacts")
+        st.caption(f"Reading models from `{model_dir}`")
         for name, path in artifacts.items():
             status = "✅" if safe_exists(path) else "❌"
             size = f" ({safe_size(path)})" if safe_exists(path) else ""
             st.write(status, name, f"`{path}`{size}")
 
         st.subheader("Bootstrap training")
+        st.caption("Interactive retraining writes to the session output directory, not the public read-only pretrained connector.")
         numpy_epochs = st.number_input("NumPy MLP epochs", min_value=1, max_value=100, value=30, step=1)
         torch_epochs = st.number_input("PyTorch CNN epochs", min_value=1, max_value=50, value=5, step=1)
-        sync_wait = st.number_input("Connector sync wait (seconds)", min_value=0, max_value=600, value=180, step=30)
-        train_button_label = "Train missing models" if missing else "Retrain / overwrite models"
+        sync_wait = st.number_input("Post-write sync wait (seconds)", min_value=0, max_value=600, value=0, step=30)
+        train_button_label = "Train models in this session" if missing else "Retrain into session directory"
         train_requested = st.button(train_button_label, type="primary" if missing else "secondary")
 
     try:
@@ -247,18 +274,20 @@ def main() -> None:
     if train_requested:
         st.header("Training models in this session")
         st.write(
-            "This runs the same training scripts as the non-interactive Renku job, writes artifacts to the selected "
-            "model directory, then waits for the mounted output connector to sync."
+            "This runs the same training scripts as the non-interactive Renku job. In the dashboard it writes to "
+            f"the session-local output directory `{session_model_dir}`, so users do not need write access to the "
+            "public pretrained-model connector."
         )
-        ok = run_training_with_progress(data_dir, model_dir, int(numpy_epochs), int(torch_epochs), int(sync_wait))
+        ok = run_training_with_progress(data_dir, session_model_dir, int(numpy_epochs), int(torch_epochs), int(sync_wait))
         if ok:
-            st.success("Models trained successfully. Refreshing dashboard...")
+            st.session_state.model_source = "Models trained in this session"
+            st.success("Models trained successfully. Switching dashboard to the session-trained models...")
             st.rerun()
         st.stop()
 
     if not available:
-        st.warning("No model artifacts found. You can train them directly from this dashboard, or run the Renku training job launcher.")
-        st.info("Use the **Train missing models** button in the sidebar to bootstrap the artifacts and watch progress here.")
+        st.warning("No model artifacts found for the selected model source. You can train models directly from this dashboard, or run the Renku training job launcher.")
+        st.info("Use the **Train models in this session** button in the sidebar to bootstrap writable session-local artifacts and watch progress here.")
         st.stop()
 
     col_controls, col_image, col_pred = st.columns([1.2, 1, 1.5])

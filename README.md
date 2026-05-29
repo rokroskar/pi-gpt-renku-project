@@ -51,6 +51,8 @@ streamlit run dashboard.py --server.address 0.0.0.0 --server.port 8080
 The dashboard expects:
 
 - data: `/home/renku/work/mnist-dataset-doi-10.5281-zenodo.10058130`
-- model artifacts: `/home/renku/work/models`
+- pre-trained model artifacts: `/home/renku/work/pretrained-model-artifacts/mnist-models`
+
+If pre-trained artifacts are unavailable, the dashboard can train models interactively into a session-local writable directory, `/home/renku/work/dashboard-trained-models`. See [`docs/dashboard.md`](docs/dashboard.md) for details.
 
 The final training log line starts with `FINAL_METRICS` and contains JSON metrics, which makes job logs easy to parse.
