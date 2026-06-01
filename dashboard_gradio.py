@@ -166,6 +166,11 @@ def cnn_predict(model_path: Path, image: np.ndarray) -> tuple[int, np.ndarray]:
     return int(probs.argmax()), probs
 
 
+def upscale_digit(image: np.ndarray, scale: int = 14) -> np.ndarray:
+    """Nearest-neighbor upscale for a clearer dashboard display."""
+    return np.repeat(np.repeat(image, scale, axis=0), scale, axis=1)
+
+
 def predict(
     data_dir: str,
     source: str,
@@ -183,14 +188,15 @@ def predict(
         model_dir = selected_model_dir(source, pretrained_dir, session_dir, custom_dir)
         paths = artifact_paths(model_dir)
         model_path = paths[model_name]
+        display_image = upscale_digit(image)
         if not safe_exists(model_path):
-            return image, f"Missing artifact for {model_name}: {model_path}", {}
+            return display_image, f"Missing artifact for {model_name}: {model_path}", {}
         if model_name == "NumPy MLP":
             pred, probs = mlp_predict(model_path, image)
         else:
             pred, probs = cnn_predict(model_path, image)
         status = f"Test example #{index} · true label: {label} · predicted: {pred} ({'correct' if pred == label else 'incorrect'})"
-        return image, status, {str(i): float(probs[i]) for i in range(10)}
+        return display_image, status, {str(i): float(probs[i]) for i in range(10)}
     except Exception as exc:
         return None, f"Error: {exc}", {}
 
@@ -304,7 +310,7 @@ def build_app() -> gr.Blocks:
                 predict_btn = gr.Button("Predict", variant="primary")
 
             with gr.Column(scale=1):
-                image = gr.Image(label="Digit", type="numpy", height=260)
+                image = gr.Image(label="Digit", type="numpy", height=430)
                 prediction = gr.Textbox(label="Prediction", lines=3)
                 probs = gr.Label(label="Class probabilities", num_top_classes=10)
 
