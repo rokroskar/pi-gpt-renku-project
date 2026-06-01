@@ -9,6 +9,7 @@ new artifacts are written to a session-local writable directory.
 
 from __future__ import annotations
 
+import argparse
 import gzip
 import os
 import random
@@ -349,8 +350,18 @@ def build_app() -> gr.Blocks:
     return app
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Run the MNIST Gradio dashboard")
+    parser.add_argument("--server_port", default=int(os.environ.get("PORT", "8080")), type=int)
+    parser.add_argument("--server_name", default="0.0.0.0", type=str)
+    parser.add_argument("--root_path", default=os.environ.get("RENKU_BASE_URL_PATH") or None, type=str)
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", "8080"))
-    base_path = os.environ.get("RENKU_BASE_URL_PATH", "").strip("/")
-    root_path = f"/{base_path}" if base_path else None
-    build_app().queue().launch(server_name="0.0.0.0", server_port=port, root_path=root_path)
+    args = parse_args()
+    build_app().queue().launch(
+        server_name=args.server_name,
+        server_port=args.server_port,
+        root_path=args.root_path,
+    )
