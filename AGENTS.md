@@ -6,7 +6,7 @@ This file captures operational context for future coding/Renku agents working on
 
 - Renku project: <https://dev.renku.ch/p/rokroskar/mnist-non-interactive-training-job>
 - GitHub repository: <https://github.com/rokroskar/pi-gpt-renku-project>
-- Current known good repo commit before dual-dashboard work: `e3420d696428820de63f739e73915a7c2ff6fd84`
+- Current dual-dashboard repo commit: `c04f2be70571644ef55a915e84f41d9b273a25f5`
 
 ## Renku helper
 
@@ -35,7 +35,8 @@ Ask before stopping/deleting active sessions or deleting/unlinking launchers/con
 - Training/artifact job launcher: `01KSNRP4T8TSSB1GYKV1R20QP7`
 - Streamlit dashboard launcher: `01KSSGCZ665NA9W020BP5FME7G`
 - Streamlit dashboard environment: `01KSSGCZ66FV774GMM0J2ARBTR`
-- Gradio dashboard launcher: not yet created at the time this note was last edited
+- Gradio dashboard launcher: `01KT17CNQMVB7759H4NZTDTZ7C`
+- Gradio dashboard environment: `01KT17CNQKHHQKGTQEPTSW3DJ3`
 - MNIST Zenodo DOI connector: `01KSMP27C2MBAFWNH6RQP2CB9C`
 - Private writable model-artifacts connector: `01KSSFN8PDX4D2RYEQ32TF779K`
 - Public read-only pretrained-artifacts connector: `01KSSR8WFH5HSRQR6AA5E49BHZ`
@@ -117,7 +118,7 @@ Last verified dashboard session:
 
 - Session name: `rokroskar-0fc6812148c0`
 - URL: <https://dev.renku.ch/p/rokroskar/mnist-non-interactive-training-job/sessions/show/rokroskar-0fc6812148c0>
-- Verified running on commit `e3420d696428820de63f739e73915a7c2ff6fd84`.
+- Previously verified running on commit `e3420d696428820de63f739e73915a7c2ff6fd84`; launchers were later updated to the dual-dashboard image from commit `c04f2be70571644ef55a915e84f41d9b273a25f5`.
 - Streamlit should be served under the Renku path prefix using `--server.baseUrlPath ${RENKU_BASE_URL_PATH#/}`.
 - Gradio should be served under the Renku path prefix using `RENKU_BASE_URL_PATH` as `root_path` in `dashboard_gradio.py`.
 
@@ -135,7 +136,7 @@ $HELPER session get rokroskar-0fc6812148c0
 $HELPER session logs rokroskar-0fc6812148c0
 $HELPER job run --launcher 01KSNRP4T8TSSB1GYKV1R20QP7
 $HELPER session launch --launcher 01KSSGCZ665NA9W020BP5FME7G
-# After the Gradio launcher is created, launch it with its launcher id.
+$HELPER session launch --launcher 01KT17CNQMVB7759H4NZTDTZ7C
 ```
 
 When rerunning the non-interactive job, remove failed/stopped old job sessions first if Renku would otherwise reuse/conflict with the same generated session name. Ask before stopping running interactive sessions.
