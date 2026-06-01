@@ -317,7 +317,7 @@ def build_app() -> gr.Blocks:
                 sync_wait = gr.Number(label="Post-write sync wait (seconds)", value=0, precision=0, minimum=0)
             train_btn = gr.Button("Train models in this session", variant="primary")
             train_status = gr.Textbox(label="Training status", lines=2)
-            train_logs = gr.Code(label="Training logs", language="text", lines=20)
+            train_logs = gr.Textbox(label="Training logs", lines=20, max_lines=30)
 
         inputs = [source, pretrained_dir, session_dir, custom_dir]
         refresh.click(artifact_status, inputs=inputs, outputs=[artifact_md, model_name])
