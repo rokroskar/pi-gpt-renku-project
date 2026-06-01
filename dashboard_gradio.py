@@ -17,6 +17,7 @@ import re
 import struct
 import subprocess
 import sys
+import time
 from functools import lru_cache
 from pathlib import Path
 from typing import Generator
@@ -191,11 +192,16 @@ def predict(
         display_image = upscale_digit(image)
         if not safe_exists(model_path):
             return display_image, f"Missing artifact for {model_name}: {model_path}", {}
+        start = time.perf_counter()
         if model_name == "NumPy MLP":
             pred, probs = mlp_predict(model_path, image)
         else:
             pred, probs = cnn_predict(model_path, image)
-        status = f"Test example #{index} · true label: {label} · predicted: {pred} ({'correct' if pred == label else 'incorrect'})"
+        elapsed_ms = (time.perf_counter() - start) * 1000.0
+        status = (
+            f"Test example #{index} · true label: {label} · predicted: {pred} "
+            f"({'correct' if pred == label else 'incorrect'}) · inference: {elapsed_ms:.1f} ms"
+        )
         return display_image, status, {str(i): float(probs[i]) for i in range(10)}
     except Exception as exc:
         return None, f"Error: {exc}", {}
