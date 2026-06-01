@@ -338,10 +338,17 @@ def build_app() -> gr.Blocks:
             inputs=[data_dir, source, pretrained_dir, session_dir, custom_dir, model_name, index],
             outputs=[image, prediction, probs],
         )
+        predict_inputs = [data_dir, source, pretrained_dir, session_dir, custom_dir, model_name, index]
+        predict_outputs = [image, prediction, probs]
         predict_btn.click(
             predict,
-            inputs=[data_dir, source, pretrained_dir, session_dir, custom_dir, model_name, index],
-            outputs=[image, prediction, probs],
+            inputs=predict_inputs,
+            outputs=predict_outputs,
+        )
+        index.release(
+            predict,
+            inputs=predict_inputs,
+            outputs=predict_outputs,
         )
         train_btn.click(
             run_training_with_progress,
