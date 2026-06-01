@@ -42,10 +42,10 @@ The scripts write:
 
 ## Dashboard
 
-A Streamlit dashboard can inspect predictions on the mounted MNIST test set and switch between available model artifacts:
+A Gradio dashboard can inspect predictions on the mounted MNIST test set and switch between available model artifacts:
 
 ```bash
-streamlit run dashboard.py --server.address 0.0.0.0 --server.port 8080
+python dashboard.py
 ```
 
 The dashboard expects:

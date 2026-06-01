@@ -1,12 +1,12 @@
-# MNIST Streamlit dashboard
+# MNIST Gradio dashboard
 
-This project includes an interactive Streamlit dashboard for inspecting MNIST test-set predictions from model artifacts produced by Renku jobs.
+This project includes an interactive Gradio dashboard for inspecting MNIST test-set predictions from model artifacts produced by Renku jobs.
 
 ## Launcher
 
-Use the Renku launcher named **MNIST Streamlit model dashboard**.
+Use the Renku launcher named **MNIST Gradio model dashboard**.
 
-The launcher runs `dashboard.py` from the runtime-cloned GitHub repository and serves Streamlit under the Renku session path prefix.
+The launcher runs `dashboard.py` from the runtime-cloned GitHub repository and serves Gradio under the Renku session path prefix.
 
 ## Default paths
 
@@ -62,11 +62,11 @@ The preferred production workflow is still the non-interactive **Prepare MNIST m
 For local development after installing dependencies:
 
 ```bash
-streamlit run dashboard.py --server.address 0.0.0.0 --server.port 8080
+python dashboard.py
 ```
 
 Set custom paths with environment variables if needed:
 
 ```bash
-MNIST_DATA_DIR=/path/to/mnist PRETRAINED_MODEL_DIR=/path/to/pretrained SESSION_MODEL_DIR=/path/to/session-models streamlit run dashboard.py
+MNIST_DATA_DIR=/path/to/mnist PRETRAINED_MODEL_DIR=/path/to/pretrained SESSION_MODEL_DIR=/path/to/session-models python dashboard.py
 ```

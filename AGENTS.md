@@ -69,8 +69,8 @@ The project should have three useful launchers:
    - Writes to `/home/renku/work/model-artifacts/mnist-models`.
    - Calls `os.sync()` and waits for rclone/output-connector sync.
 
-3. **MNIST Streamlit model dashboard**
-   - Interactive Streamlit launcher.
+3. **MNIST Gradio model dashboard**
+   - Interactive Gradio launcher.
    - Runs dashboard from runtime-cloned source:
      `/home/renku/work/pi-gpt-renku-project/dashboard.py`
    - Reads public pretrained models by default from:
@@ -108,7 +108,7 @@ Last verified dashboard session:
 - Session name: `rokroskar-0fc6812148c0`
 - URL: <https://dev.renku.ch/p/rokroskar/mnist-non-interactive-training-job/sessions/show/rokroskar-0fc6812148c0>
 - Verified running on commit `e3420d696428820de63f739e73915a7c2ff6fd84`.
-- Streamlit served under the Renku path prefix using `--server.baseUrlPath ${RENKU_BASE_URL_PATH#/}`.
+- Gradio served under the Renku path prefix using `RENKU_BASE_URL_PATH` as `root_path` in `dashboard.py`.
 
 ## Useful commands
 
