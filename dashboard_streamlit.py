@@ -16,6 +16,7 @@ import re
 import struct
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import numpy as np
@@ -114,6 +115,11 @@ def cnn_predict(model_path: Path, image: np.ndarray) -> tuple[int, np.ndarray]:
         logits = model(x)
         probs = torch.softmax(logits, dim=1).cpu().numpy()[0]
     return int(probs.argmax()), probs
+
+
+def upscale_digit(image: np.ndarray, scale: int = 14) -> np.ndarray:
+    """Nearest-neighbor upscale for a clearer dashboard display."""
+    return np.repeat(np.repeat(image, scale, axis=0), scale, axis=1)
 
 
 def artifact_status(model_dir: Path) -> dict[str, Path]:
@@ -303,19 +309,22 @@ def main() -> None:
 
     with col_image:
         st.subheader("Digit")
-        st.image(image, caption=f"MNIST test #{idx}", width=220, clamp=True)
+        st.image(upscale_digit(image), caption=f"MNIST test #{idx}", width=420, clamp=True)
 
     with col_pred:
         st.subheader("Prediction")
         try:
+            start = time.perf_counter()
             if model_name == "NumPy MLP":
                 pred, probs = mlp_predict(artifacts[model_name], image)
             else:
                 pred, probs = cnn_predict(artifacts[model_name], image)
+            elapsed_ms = (time.perf_counter() - start) * 1000.0
         except Exception as exc:
             st.error(f"Could not run prediction with {model_name}: {exc}")
             st.stop()
         st.metric("Predicted digit", pred, delta="correct" if pred == label else "incorrect")
+        st.metric("Inference time", f"{elapsed_ms:.1f} ms")
         st.bar_chart({str(i): float(probs[i]) for i in range(10)})
 
     if missing:
