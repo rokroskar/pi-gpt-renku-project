@@ -40,15 +40,21 @@ The scripts write:
 - `models/mnist-small-cnn.pt` for PyTorch
 - `models/mnist-mlp-model.npz` for NumPy
 
-## Dashboard
+## Dashboards
 
-A Gradio dashboard can inspect predictions on the mounted MNIST test set and switch between available model artifacts:
+This repository includes two interactive dashboards that inspect predictions on the mounted MNIST test set and switch between available model artifacts:
+
+- `dashboard_streamlit.py`: Streamlit implementation.
+- `dashboard_gradio.py`: Gradio implementation.
+
+Run locally with:
 
 ```bash
-python dashboard.py
+streamlit run dashboard_streamlit.py --server.address 0.0.0.0 --server.port 8080
+python dashboard_gradio.py
 ```
 
-The dashboard expects:
+The dashboards expect:
 
 - data: `/home/renku/work/mnist-dataset-doi-10.5281-zenodo.10058130`
 - pre-trained model artifacts: `/home/renku/work/pretrained-model-artifacts/mnist-models`

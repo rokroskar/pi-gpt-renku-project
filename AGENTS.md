@@ -6,7 +6,7 @@ This file captures operational context for future coding/Renku agents working on
 
 - Renku project: <https://dev.renku.ch/p/rokroskar/mnist-non-interactive-training-job>
 - GitHub repository: <https://github.com/rokroskar/pi-gpt-renku-project>
-- Current known good repo commit: `e3420d696428820de63f739e73915a7c2ff6fd84`
+- Current known good repo commit before dual-dashboard work: `e3420d696428820de63f739e73915a7c2ff6fd84`
 
 ## Renku helper
 
@@ -33,8 +33,9 @@ Ask before stopping/deleting active sessions or deleting/unlinking launchers/con
 - Build environment: `01KSNRHVFK8ND7NGPPNEZN1138`
 - Build launcher: `01KSNRHVFK2ZZ25HWNMSKB5F38`
 - Training/artifact job launcher: `01KSNRP4T8TSSB1GYKV1R20QP7`
-- Dashboard launcher: `01KSSGCZ665NA9W020BP5FME7G`
-- Dashboard environment: `01KSSGCZ66FV774GMM0J2ARBTR`
+- Streamlit dashboard launcher: `01KSSGCZ665NA9W020BP5FME7G`
+- Streamlit dashboard environment: `01KSSGCZ66FV774GMM0J2ARBTR`
+- Gradio dashboard launcher: not yet created at the time this note was last edited
 - MNIST Zenodo DOI connector: `01KSMP27C2MBAFWNH6RQP2CB9C`
 - Private writable model-artifacts connector: `01KSSFN8PDX4D2RYEQ32TF779K`
 - Public read-only pretrained-artifacts connector: `01KSSR8WFH5HSRQR6AA5E49BHZ`
@@ -56,7 +57,7 @@ Ask before stopping/deleting active sessions or deleting/unlinking launchers/con
 
 ## Current launchers
 
-The project should have three useful launchers:
+The project should have four useful launchers:
 
 1. **Build Python environment from repository**
    - Builds dependencies from `requirements.txt`.
@@ -69,10 +70,19 @@ The project should have three useful launchers:
    - Writes to `/home/renku/work/model-artifacts/mnist-models`.
    - Calls `os.sync()` and waits for rclone/output-connector sync.
 
-3. **MNIST Gradio model dashboard**
+3. **MNIST Streamlit model dashboard**
+   - Interactive Streamlit launcher.
+   - Runs dashboard from runtime-cloned source:
+     `/home/renku/work/pi-gpt-renku-project/dashboard_streamlit.py`
+   - Reads public pretrained models by default from:
+     `/home/renku/work/pretrained-model-artifacts/mnist-models`
+   - Can retrain interactively into:
+     `/home/renku/work/dashboard-trained-models`
+
+4. **MNIST Gradio model dashboard**
    - Interactive Gradio launcher.
    - Runs dashboard from runtime-cloned source:
-     `/home/renku/work/pi-gpt-renku-project/dashboard.py`
+     `/home/renku/work/pi-gpt-renku-project/dashboard_gradio.py`
    - Reads public pretrained models by default from:
      `/home/renku/work/pretrained-model-artifacts/mnist-models`
    - Can retrain interactively into:
@@ -108,7 +118,8 @@ Last verified dashboard session:
 - Session name: `rokroskar-0fc6812148c0`
 - URL: <https://dev.renku.ch/p/rokroskar/mnist-non-interactive-training-job/sessions/show/rokroskar-0fc6812148c0>
 - Verified running on commit `e3420d696428820de63f739e73915a7c2ff6fd84`.
-- Gradio served under the Renku path prefix using `RENKU_BASE_URL_PATH` as `root_path` in `dashboard.py`.
+- Streamlit should be served under the Renku path prefix using `--server.baseUrlPath ${RENKU_BASE_URL_PATH#/}`.
+- Gradio should be served under the Renku path prefix using `RENKU_BASE_URL_PATH` as `root_path` in `dashboard_gradio.py`.
 
 ## Useful commands
 
@@ -124,6 +135,7 @@ $HELPER session get rokroskar-0fc6812148c0
 $HELPER session logs rokroskar-0fc6812148c0
 $HELPER job run --launcher 01KSNRP4T8TSSB1GYKV1R20QP7
 $HELPER session launch --launcher 01KSSGCZ665NA9W020BP5FME7G
+# After the Gradio launcher is created, launch it with its launcher id.
 ```
 
 When rerunning the non-interactive job, remove failed/stopped old job sessions first if Renku would otherwise reuse/conflict with the same generated session name. Ask before stopping running interactive sessions.
@@ -132,7 +144,8 @@ When rerunning the non-interactive job, remove failed/stopped old job sessions f
 
 - `README.md`
 - `docs/dashboard.md`
-- `dashboard.py`
+- `dashboard_streamlit.py`
+- `dashboard_gradio.py`
 - `prepare_model_artifacts.py`
 - `train_mnist.py`
 - `train_torch_mnist.py`
