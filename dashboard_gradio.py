@@ -297,7 +297,7 @@ def build_app() -> gr.Blocks:
                     value="Pretrained models (public, read-only)",
                 )
                 refresh = gr.Button("Refresh artifact status")
-                artifact_md = gr.Markdown()
+                artifact_md = gr.Markdown("Click **Refresh artifact status** to check available model artifacts.")
                 model_name = gr.Dropdown(label="Model", choices=MODEL_NAMES, value=MODEL_NAMES[0])
                 index = gr.Slider(label="Test example index", minimum=0, maximum=9999, step=1, value=0)
                 random_btn = gr.Button("Random example")
@@ -321,11 +321,11 @@ def build_app() -> gr.Blocks:
             train_logs = gr.Textbox(label="Training logs", lines=20, max_lines=30)
 
         inputs = [source, pretrained_dir, session_dir, custom_dir]
-        refresh.click(artifact_status, inputs=inputs, outputs=[artifact_md, model_name])
-        source.change(artifact_status, inputs=inputs, outputs=[artifact_md, model_name])
-        pretrained_dir.change(artifact_status, inputs=inputs, outputs=[artifact_md, model_name])
-        session_dir.change(artifact_status, inputs=inputs, outputs=[artifact_md, model_name])
-        custom_dir.change(artifact_status, inputs=inputs, outputs=[artifact_md, model_name])
+        refresh.click(artifact_status, inputs=inputs, outputs=[artifact_md, model_name], queue=False)
+        source.change(artifact_status, inputs=inputs, outputs=[artifact_md, model_name], queue=False)
+        pretrained_dir.change(artifact_status, inputs=inputs, outputs=[artifact_md, model_name], queue=False)
+        session_dir.change(artifact_status, inputs=inputs, outputs=[artifact_md, model_name], queue=False)
+        custom_dir.change(artifact_status, inputs=inputs, outputs=[artifact_md, model_name], queue=False)
 
         random_btn.click(random_index, inputs=[data_dir], outputs=[index]).then(
             predict,
@@ -342,11 +342,10 @@ def build_app() -> gr.Blocks:
             inputs=[data_dir, session_dir, numpy_epochs, torch_epochs, sync_wait],
             outputs=[train_status, train_logs],
         )
-        app.load(artifact_status, inputs=inputs, outputs=[artifact_md, model_name]).then(
-            predict,
-            inputs=[data_dir, source, pretrained_dir, session_dir, custom_dir, model_name, index],
-            outputs=[image, prediction, probs],
-        )
+        # Avoid doing connector/model reads automatically on page load. Some
+        # mounted connectors can be slow to respond, and an automatic queued
+        # prediction makes the Gradio UI look like it is stuck on "running".
+        # Users explicitly click Refresh/Predict instead.
     return app
 
 
